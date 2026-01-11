@@ -69,7 +69,6 @@ public class AuthController {
             user.setName(registerRequest.getUsername());
             user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
             userRepository.save(user);
-
             Map<String, String> response = new HashMap<>();
             response.put("username", registerRequest.getUsername());
 
