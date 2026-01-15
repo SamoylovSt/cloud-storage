@@ -6,18 +6,17 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class MinioResourceInfo implements MinioResource {
+public class MinioDirectoryInfo implements MinioResource{
     @JsonProperty("path")
     private String path;
+
     @JsonProperty("name")
     private String name;
-    @JsonProperty("size")
-    private Long size;
+
     @JsonProperty("type")
-    private String type;
+    private String type = "DIRECTORY";
 }
