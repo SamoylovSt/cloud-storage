@@ -16,6 +16,7 @@ import ru.samoylov.cloud_storage.dto.AuthRequest;
 import ru.samoylov.cloud_storage.dto.RegisterRequest;
 import ru.samoylov.cloud_storage.entity.User;
 import ru.samoylov.cloud_storage.repository.UserRepository;
+import ru.samoylov.cloud_storage.service.UserService;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -27,11 +28,12 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-
-    public AuthController(AuthenticationManager authenticationManager, UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    private final UserService userService;
+    public AuthController(AuthenticationManager authenticationManager, UserRepository userRepository, PasswordEncoder passwordEncoder, UserService userService) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.userService = userService;
     }
 
     @PostMapping("/sign-in")
@@ -48,6 +50,7 @@ public class AuthController {
 
             String name = SecurityContextHolder.getContext().getAuthentication().getName().toString();
             System.out.println(name);
+
             response.put("username", authRequest.getUsername());
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -72,6 +75,7 @@ public class AuthController {
             Map<String, String> response = new HashMap<>();
             response.put("username", registerRequest.getUsername());
 
+            //TODO попробовать создавать папку юзера когда он заходит
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (Exception e) {
             Map<String, String> response = new HashMap<>();
