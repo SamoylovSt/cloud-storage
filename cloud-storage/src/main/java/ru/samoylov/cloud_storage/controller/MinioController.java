@@ -44,9 +44,10 @@ public class MinioController {
 
     @PostMapping("/resource")
     public ResponseEntity<?> upload(@RequestParam(name = "path") String path,
-                                    MultipartFile file
+                                    @RequestParam( "object") MultipartFile file
     ) {
-        return ResponseEntity.ok(minioService.uploadResource(path, file));
+        var response=minioService.uploadResource(path, file);
+        return ResponseEntity.status(201).body(response);
     }
 
 }

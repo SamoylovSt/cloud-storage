@@ -81,7 +81,7 @@ public class SecurityConfig {
                 )
                 .requestCache(requestCache -> requestCache.disable())
                 .formLogin(AbstractHttpConfigurer::disable)
-                 .httpBasic(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
 
                 .exceptionHandling(eh -> eh.authenticationEntryPoint((request, response, authException) -> {
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);

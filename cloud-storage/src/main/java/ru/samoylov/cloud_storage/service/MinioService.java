@@ -53,7 +53,6 @@ public class MinioService {
                 Item item = result.get();
                 String fileName = getFileNameWithoutPath(item.objectName());
                 String folderName = getFolderNameWithoutPath(item.objectName());
-                System.out.println(folderName + " имя папки без пути");
                 if (!item.isDir() && item.size() != 0) {
                     MinioResourceInfo minioResourceInfo = new MinioResourceInfo();
                     minioResourceInfo.setSize(item.size());
@@ -181,11 +180,12 @@ public class MinioService {
     public MinioResourceInfo uploadResource(String path, MultipartFile file) {
         try {
             String rootFolder=getRootFolder();
-            path = normalizePath(path);
+            //path = normalizePath(path);
+            String fileName=getFileNameWithoutPath(path);
             minioClient.putObject(
                     PutObjectArgs.builder()
                             .bucket(bucketname)
-                            .object(path+"/")
+                            .object(rootFolder+path)
                             .stream(
                                     file.getInputStream(),  // InputStream из MultipartFile
                                     file.getSize(),         // Размер файла
@@ -195,15 +195,16 @@ public class MinioService {
                             .build()
             );
             MinioResourceInfo minioResourceInfo = new MinioResourceInfo();
-            minioResourceInfo.setPath(path);
-            long l = 1;
-            minioResourceInfo.setSize(l);
-            minioResourceInfo.setType(getResourceInfo(path).getType());
-            minioResourceInfo.setName(getResourceInfo(path).getName());
+            minioResourceInfo.setSize(file.getSize());
+            minioResourceInfo.setType("FILE");
+            minioResourceInfo.setName(fileName);
+            minioResourceInfo.setPath(rootFolder+path);
+            System.out.println("end");
             return minioResourceInfo;
         } catch (Exception e) {
             throw new RuntimeException("Ошибка при загрузке ресурса", e);
         }
+
     }
 
 }
