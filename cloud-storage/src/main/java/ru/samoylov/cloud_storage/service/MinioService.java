@@ -1,6 +1,7 @@
 package ru.samoylov.cloud_storage.service;
 
 import io.minio.*;
+import io.minio.errors.*;
 import io.minio.messages.Item;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,6 +13,10 @@ import ru.samoylov.cloud_storage.dto.MinioResource;
 import ru.samoylov.cloud_storage.dto.MinioResourceInfo;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -135,12 +140,12 @@ public class MinioService {
     }
 
     public void deleteResource(String path) {
-      String rootFolder=getRootFolder();
+        String rootFolder = getRootFolder();
         try {
             minioClient.removeObject(
                     RemoveObjectArgs.builder()
                             .bucket(bucketname)
-                            .object(rootFolder+path)
+                            .object(rootFolder + path)
                             .build()
             );
         } catch (Exception e) {
@@ -176,20 +181,32 @@ public class MinioService {
 
     }
 
-
-    public MinioResourceInfo uploadResource(String path, MultipartFile file) {
+    public InputStream download(String path) {
+        String rootFolder = getRootFolder();
         try {
-            String rootFolder=getRootFolder();
-            //path = normalizePath(path);
-            String fileName=getFileNameWithoutPath(path);
+            return minioClient.getObject(
+                    GetObjectArgs.builder()
+                            .bucket(bucketname)
+                            .object(rootFolder + path)
+                            .build()
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("Ошибка загрузки файла", e);
+        }
+    }
+
+    public MinioResourceInfo upload(String path, MultipartFile file) {
+        try {
+            String rootFolder = getRootFolder();
+            String fileName = getFileNameWithoutPath(path);
             minioClient.putObject(
                     PutObjectArgs.builder()
                             .bucket(bucketname)
-                            .object(rootFolder+path)
+                            .object(rootFolder + path)
                             .stream(
-                                    file.getInputStream(),  // InputStream из MultipartFile
-                                    file.getSize(),         // Размер файла
-                                    -1                      // Часть размера (не используется)
+                                    file.getInputStream(),
+                                    file.getSize(),
+                                    -1
                             )
                             .contentType(file.getContentType())
                             .build()
@@ -198,7 +215,7 @@ public class MinioService {
             minioResourceInfo.setSize(file.getSize());
             minioResourceInfo.setType("FILE");
             minioResourceInfo.setName(fileName);
-            minioResourceInfo.setPath(rootFolder+path);
+            minioResourceInfo.setPath(rootFolder + path);
             System.out.println("end");
             return minioResourceInfo;
         } catch (Exception e) {
@@ -207,4 +224,17 @@ public class MinioService {
 
     }
 
+    public MinioResourceInfo search(String query) {
+        try {
+          StatObjectResponse stat=  minioClient.statObject(StatObjectArgs.builder()
+                    .bucket(bucketname)
+                    .object(query)
+                    .build());
+            MinioResourceInfo minioResourceInfo= new MinioResourceInfo();
+           return  minioResourceInfo;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+    }
 }

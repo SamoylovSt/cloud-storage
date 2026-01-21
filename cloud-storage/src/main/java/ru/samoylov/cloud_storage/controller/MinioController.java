@@ -1,13 +1,15 @@
 package ru.samoylov.cloud_storage.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import ru.samoylov.cloud_storage.dto.MinioResource;
 import ru.samoylov.cloud_storage.service.MinioService;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 
 @RestController
@@ -44,10 +46,23 @@ public class MinioController {
 
     @PostMapping("/resource")
     public ResponseEntity<?> upload(@RequestParam(name = "path") String path,
-                                    @RequestParam( "object") MultipartFile file
+                                    @RequestParam("object") MultipartFile file
     ) {
-        var response=minioService.uploadResource(path, file);
+        String fileName = file.getOriginalFilename();
+        var response = minioService.upload(path + fileName, file);
         return ResponseEntity.status(201).body(response);
     }
+
+    @GetMapping("/resource/download")
+    public ResponseEntity<byte[]> download(@RequestParam(name = "path") String path) throws IOException {
+        InputStream fileStream = minioService.download(path);
+        byte[] fileContent= fileStream.readAllBytes();
+        fileStream.close();
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(fileContent);
+    }
+
 
 }
