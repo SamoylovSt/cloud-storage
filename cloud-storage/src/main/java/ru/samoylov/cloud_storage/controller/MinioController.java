@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import ru.samoylov.cloud_storage.dto.MinioResource;
+import ru.samoylov.cloud_storage.dto.MinioResourceInfo;
 import ru.samoylov.cloud_storage.service.MinioService;
 
 import java.io.IOException;
@@ -44,13 +45,14 @@ public class MinioController {
         return ResponseEntity.ok(minioService.getResourceInfo(path));
     }
 
+
     @PostMapping("/resource")
-    public ResponseEntity<?> upload(@RequestParam(name = "path") String path,
-                                    @RequestParam("object") MultipartFile file
-    ) {
-        String fileName = file.getOriginalFilename();
-        var response = minioService.upload(path + fileName, file);
-        return ResponseEntity.status(201).body(response);
+    public ResponseEntity<?> upload(
+            @RequestParam("path") String folderPath,
+            @RequestParam("object") MultipartFile[] files) {
+
+        List<MinioResource> uploadedFiles = minioService.uploadMultiple(folderPath, files);
+        return ResponseEntity.status(201).body(uploadedFiles);
     }
 
     @GetMapping("/resource/download")

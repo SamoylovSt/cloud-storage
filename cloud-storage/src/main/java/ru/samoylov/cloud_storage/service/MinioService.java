@@ -19,6 +19,7 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.zip.ZipOutputStream;
 
 @Service
 public class MinioService {
@@ -41,7 +42,6 @@ public class MinioService {
         String rootFolder = "user-" + currentUserId + "-files/";
         return rootFolder;
     }
-
 
     public List<MinioResource> getInfoInFolder(String path) {
         List<MinioResource> minioResourceInfoList = new ArrayList<>();
@@ -70,7 +70,6 @@ public class MinioService {
                     minioDirectoryInfo.setType("DIRECTORY");
                     minioDirectoryInfo.setPath(path);
                     minioDirectoryInfo.setName(folderName + "/");
-                    //TODO имя отображается не по тз со /  без "/" в имени, папки отображаются как файлы
                     minioResourceInfoList.add(minioDirectoryInfo);
                 }
             }
@@ -142,12 +141,20 @@ public class MinioService {
     public void deleteResource(String path) {
         String rootFolder = getRootFolder();
         try {
-            minioClient.removeObject(
-                    RemoveObjectArgs.builder()
+            Iterable<Result<Item>> results = minioClient.listObjects(
+                    ListObjectsArgs.builder()
                             .bucket(bucketname)
-                            .object(rootFolder + path)
+                            .prefix(rootFolder + path)
+                            .recursive(true)
                             .build()
             );
+            for (Result<Item> result : results) {
+                Item item = result.get();
+                minioClient.removeObject(RemoveObjectArgs.builder()
+                        .bucket(bucketname)
+                        .object(item.objectName())
+                        .build());
+            }
         } catch (Exception e) {
             throw new RuntimeException("ошибка удаления ресурса", e);
         }
@@ -195,7 +202,11 @@ public class MinioService {
         }
     }
 
-    public MinioResourceInfo upload(String path, MultipartFile file) {
+    public void hui(){
+
+    }
+
+    public MinioResource upload(String path, MultipartFile file) {
         try {
             String rootFolder = getRootFolder();
             String fileName = getFileNameWithoutPath(path);
@@ -214,27 +225,36 @@ public class MinioService {
             MinioResourceInfo minioResourceInfo = new MinioResourceInfo();
             minioResourceInfo.setSize(file.getSize());
             minioResourceInfo.setType("FILE");
-            minioResourceInfo.setName(fileName);
             minioResourceInfo.setPath(rootFolder + path);
-            System.out.println("end");
+            minioResourceInfo.setName(fileName);
             return minioResourceInfo;
         } catch (Exception e) {
             throw new RuntimeException("Ошибка при загрузке ресурса", e);
         }
-
     }
+
+
+    public List<MinioResource> uploadMultiple(String path, MultipartFile[] files) {
+        List<MinioResource> results = new ArrayList<>();
+        for (MultipartFile file : files) {
+            String fullPath = path + file.getOriginalFilename();
+            MinioResource info = upload(fullPath, file);
+            results.add(info);
+        }
+        return results;
+    }
+
 
     public MinioResourceInfo search(String query) {
         try {
-          StatObjectResponse stat=  minioClient.statObject(StatObjectArgs.builder()
+            StatObjectResponse stat = minioClient.statObject(StatObjectArgs.builder()
                     .bucket(bucketname)
                     .object(query)
                     .build());
-            MinioResourceInfo minioResourceInfo= new MinioResourceInfo();
-           return  minioResourceInfo;
+            MinioResourceInfo minioResourceInfo = new MinioResourceInfo();
+            return minioResourceInfo;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-
     }
 }
