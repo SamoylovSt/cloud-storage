@@ -1,16 +1,14 @@
 package ru.samoylov.cloud_storage.controller;
 
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import ru.samoylov.cloud_storage.dto.MinioResource;
-import ru.samoylov.cloud_storage.dto.MinioResourceInfo;
 import ru.samoylov.cloud_storage.service.MinioService;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
 
 @RestController
@@ -56,15 +54,18 @@ public class MinioController {
     }
 
     @GetMapping("/resource/download")
-    public ResponseEntity<byte[]> download(@RequestParam(name = "path") String path) throws IOException {
-        InputStream fileStream = minioService.download(path);
-        byte[] fileContent= fileStream.readAllBytes();
-        fileStream.close();
-
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(fileContent);
+    public ResponseEntity<?> download(@RequestParam(name = "path") String path,
+                                      HttpServletResponse response) {
+        response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
+        minioService.download(path, response);
+        return ResponseEntity.ok().build();
     }
 
+    @GetMapping("/resource/search")
+    public ResponseEntity<?> search(@RequestParam(name = "query") String path) {
+
+        List<MinioResource> minioResource = minioService.search(path);
+        return ResponseEntity.ok().body(minioResource);
+    }
 
 }

@@ -1,8 +1,8 @@
 package ru.samoylov.cloud_storage.service;
 
 import io.minio.*;
-import io.minio.errors.*;
 import io.minio.messages.Item;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -13,12 +13,11 @@ import ru.samoylov.cloud_storage.dto.MinioResource;
 import ru.samoylov.cloud_storage.dto.MinioResourceInfo;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.io.InputStream;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 @Service
@@ -30,18 +29,18 @@ public class MinioService {
     @Autowired
     private MinioClient minioClient;
 
-
     public MinioService(MinioClient minioClient, UserService userService) {
         this.minioClient = minioClient;
         this.userService = userService;
     }
 
-    private String getRootFolder() {
+    public String getRootFolder() {
         String currentUserName = SecurityContextHolder.getContext().getAuthentication().getName().toString();
         long currentUserId = userService.getCurrentUserIdByName(currentUserName);
         String rootFolder = "user-" + currentUserId + "-files/";
         return rootFolder;
     }
+
 
     public List<MinioResource> getInfoInFolder(String path) {
         List<MinioResource> minioResourceInfoList = new ArrayList<>();
@@ -188,10 +187,10 @@ public class MinioService {
 
     }
 
-    public InputStream download(String path) {
+    public void downloadFile(String path) {
         String rootFolder = getRootFolder();
         try {
-            return minioClient.getObject(
+            minioClient.getObject(
                     GetObjectArgs.builder()
                             .bucket(bucketname)
                             .object(rootFolder + path)
@@ -202,8 +201,85 @@ public class MinioService {
         }
     }
 
-    public void hui(){
+    public void download(String path, HttpServletResponse response) {
+        if (isFolder(path)) {
+            downloadFolder(path, response);
+        } else {
+            downloadFile(path);
+        }
+    }
 
+    public void downloadFolder(String path, HttpServletResponse response) {
+        String rootFolder = getRootFolder();
+        String follPath = rootFolder + path;
+        Iterable<Result<Item>> results = minioClient.listObjects(ListObjectsArgs.builder()
+                .bucket(bucketname)
+                .prefix(follPath)
+                .recursive(true)
+                .build());
+        try {
+            OutputStream servletOutputStream = response.getOutputStream();
+            ZipOutputStream zout = new ZipOutputStream(servletOutputStream);
+            for (Result<Item> result : results) {
+                Item item = result.get();
+                String objectKey = item.objectName();
+                String keyForZipWithoutRootPath = objectKey.substring(rootFolder.length());
+                if (objectKey.endsWith("/")) {
+                    continue;
+                }
+                ZipEntry zipEntry = new ZipEntry(keyForZipWithoutRootPath);
+                zout.putNextEntry(zipEntry);
+
+                try (InputStream fileStream = minioClient.getObject(
+                        GetObjectArgs.builder()
+                                .bucket(bucketname)
+                                .object(objectKey)
+                                .build()
+                )) {
+                    byte[] buffer = new byte[8192];
+                    int bytesRead;
+                    while ((bytesRead = fileStream.read(buffer)) != -1) {
+                        zout.write(buffer, 0, bytesRead);
+                    }
+                }
+            }
+            zout.close();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Boolean isFolder(String path) {
+        String rootFolder = getRootFolder();
+        String follPath = rootFolder + path;
+        System.out.println(path + " путь из isFolder");
+        if (path.endsWith("/")) {
+            return true;
+        }
+        try {
+            StatObjectResponse stat = minioClient.statObject(StatObjectArgs.builder()
+                    .bucket(bucketname)
+                    .object(follPath)
+                    .build()
+            );
+
+            if (stat != null && stat.size() > 0) {
+                return false;
+            }
+            String prefix = follPath.endsWith("/") ? follPath : follPath + "/";
+
+            Iterable<Result<Item>> results = minioClient.listObjects(
+                    ListObjectsArgs.builder()
+                            .bucket(bucketname)
+                            .prefix(prefix)
+                            .maxKeys(1)
+                            .build()
+            );
+
+            return results.iterator().hasNext();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public MinioResource upload(String path, MultipartFile file) {
@@ -233,7 +309,6 @@ public class MinioService {
         }
     }
 
-
     public List<MinioResource> uploadMultiple(String path, MultipartFile[] files) {
         List<MinioResource> results = new ArrayList<>();
         for (MultipartFile file : files) {
@@ -244,15 +319,45 @@ public class MinioService {
         return results;
     }
 
-
-    public MinioResourceInfo search(String query) {
+    public List<MinioResource> search(String query) {
+        List<MinioResource> minioResourceList = new ArrayList<>();
+        String rootFolder = getRootFolder();
         try {
-            StatObjectResponse stat = minioClient.statObject(StatObjectArgs.builder()
+            Iterable<Result<Item>> results = minioClient.listObjects(ListObjectsArgs.builder()
                     .bucket(bucketname)
-                    .object(query)
+                    .prefix(rootFolder)
+                    .recursive(true)
                     .build());
-            MinioResourceInfo minioResourceInfo = new MinioResourceInfo();
-            return minioResourceInfo;
+
+            for (Result<Item> result : results) {
+
+                Item item = result.get();
+                String path = item.objectName();
+                System.out.println("путь с включением " + path);
+                if (path.contains(query + "/")) {
+
+                    String searchPattern = query + "/";
+                    int indexForSubstring = path.indexOf(searchPattern);
+
+                    String finalPath = "";
+                    if (indexForSubstring != -1) {
+                        finalPath = path.substring(0, indexForSubstring + searchPattern.length());
+                        finalPath = finalPath.replace(rootFolder, "");
+                        finalPath=finalPath.replace(searchPattern,"");
+                        System.out.println("финальный путь " + finalPath);
+                    }
+
+                    MinioDirectoryInfo minioDirectoryInfo = new MinioDirectoryInfo();
+                    minioDirectoryInfo.setType("DIRECTORY");
+                    minioDirectoryInfo.setPath(finalPath);
+                    minioDirectoryInfo.setName(query + "/");
+                    minioResourceList.add(minioDirectoryInfo);
+                    break;
+                }
+
+            }
+            return minioResourceList;
+
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
