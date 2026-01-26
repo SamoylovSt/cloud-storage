@@ -56,7 +56,7 @@ public class MinioService {
             for (Result<Item> result : results) {
                 Item item = result.get();
                 String fileName = getFileNameWithoutPath(item.objectName());
-                String folderName = getFolderNameWithoutPath(item.objectName());
+                String folderName = geObjectNameWithoutPath(item.objectName());
                 if (!item.isDir() && item.size() != 0) {
                     MinioResourceInfo minioResourceInfo = new MinioResourceInfo();
                     minioResourceInfo.setSize(item.size());
@@ -84,7 +84,7 @@ public class MinioService {
         return result;
     }
 
-    public String getFolderNameWithoutPath(String path) {
+    public String geObjectNameWithoutPath(String path) {
         String[] splitList = path.split("/");
         String result = splitList[splitList.length - 1];
 
@@ -129,7 +129,7 @@ public class MinioService {
             );
             MinioDirectoryInfo minioDirectoryInfo = new MinioDirectoryInfo();
             minioDirectoryInfo.setType("DIRECTORY");
-            minioDirectoryInfo.setName(getFolderNameWithoutPath(path));
+            minioDirectoryInfo.setName(geObjectNameWithoutPath(path));
             minioDirectoryInfo.setPath(folderPathForSave);
             return minioDirectoryInfo;
         } catch (Exception e) {
@@ -171,7 +171,7 @@ public class MinioService {
                 MinioDirectoryInfo minioDirectoryInfo = new MinioDirectoryInfo();
                 minioDirectoryInfo.setType("DIRECTORY");
                 minioDirectoryInfo.setPath(path);
-                minioDirectoryInfo.setName(getFolderNameWithoutPath(path));
+                minioDirectoryInfo.setName(geObjectNameWithoutPath(path));
                 return minioDirectoryInfo;
             } else {
                 MinioResourceInfo minioResourceInfo = new MinioResourceInfo();
@@ -187,15 +187,21 @@ public class MinioService {
 
     }
 
-    public void downloadFile(String path) {
+    public void downloadFile(String path, HttpServletResponse response) {
         String rootFolder = getRootFolder();
-        try {
-            minioClient.getObject(
-                    GetObjectArgs.builder()
-                            .bucket(bucketname)
-                            .object(rootFolder + path)
-                            .build()
-            );
+        try (InputStream inputStream = minioClient.getObject(
+                GetObjectArgs.builder()
+                        .bucket(bucketname)
+                        .object(rootFolder + path)
+                        .build()
+        );
+             OutputStream outputStream = response.getOutputStream();) {
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, bytesRead);
+            }
+
         } catch (Exception e) {
             throw new RuntimeException("Ошибка загрузки файла", e);
         }
@@ -205,8 +211,9 @@ public class MinioService {
         if (isFolder(path)) {
             downloadFolder(path, response);
         } else {
-            downloadFile(path);
+            downloadFile(path, response);
         }
+
     }
 
     public void downloadFolder(String path, HttpServletResponse response) {
@@ -326,33 +333,47 @@ public class MinioService {
             Iterable<Result<Item>> results = minioClient.listObjects(ListObjectsArgs.builder()
                     .bucket(bucketname)
                     .prefix(rootFolder)
+                    .delimiter("/")
                     .recursive(true)
                     .build());
 
             for (Result<Item> result : results) {
-
                 Item item = result.get();
                 String path = item.objectName();
                 System.out.println("путь с включением " + path);
-                if (path.contains(query + "/")) {
 
-                    String searchPattern = query + "/";
-                    int indexForSubstring = path.indexOf(searchPattern);
+                String searchPattern = query + "/";
+                String folderName = geObjectNameWithoutPath(path) + "/";
+                String fileName = geObjectNameWithoutPath(path);
 
-                    String finalPath = "";
-                    if (indexForSubstring != -1) {
-                        finalPath = path.substring(0, indexForSubstring + searchPattern.length());
-                        finalPath = finalPath.replace(rootFolder, "");
-                        finalPath=finalPath.replace(searchPattern,"");
-                        System.out.println("финальный путь " + finalPath);
-                    }
+                String pathForFolder = path.replace(rootFolder, "");
+              if(pathForFolder.isEmpty()|| pathForFolder==null ||pathForFolder.equals("")){
+                  pathForFolder=path;
+              }
+                pathForFolder = pathForFolder.replace(searchPattern, "");
+
+                if (path.endsWith(searchPattern)) {
+
+                    System.out.println("финальный путь для папки " + pathForFolder);
 
                     MinioDirectoryInfo minioDirectoryInfo = new MinioDirectoryInfo();
                     minioDirectoryInfo.setType("DIRECTORY");
-                    minioDirectoryInfo.setPath(finalPath);
+                    minioDirectoryInfo.setPath(pathForFolder);
                     minioDirectoryInfo.setName(query + "/");
                     minioResourceList.add(minioDirectoryInfo);
-                    break;
+
+                } else if (item.size() > 0 && fileName.contains(query)) {
+
+                    String finalPath = path.replace(rootFolder, "");
+                    finalPath = finalPath.replace(fileName, "");
+                    System.out.println("финальный путь для файла" + finalPath);
+                    MinioResourceInfo minioResourceInfo = new MinioResourceInfo();
+                    minioResourceInfo.setSize(item.size());
+                    minioResourceInfo.setName(fileName);
+                    minioResourceInfo.setType("FILE");
+                    minioResourceInfo.setPath(finalPath);
+                    minioResourceList.add(minioResourceInfo);
+
                 }
 
             }
@@ -362,4 +383,6 @@ public class MinioService {
             throw new RuntimeException(e);
         }
     }
+
+
 }

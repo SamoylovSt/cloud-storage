@@ -7,8 +7,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import ru.samoylov.cloud_storage.dto.MinioResource;
+import ru.samoylov.cloud_storage.dto.MinioResourceInfo;
 import ru.samoylov.cloud_storage.service.MinioService;
 
+import java.io.InputStream;
 import java.util.List;
 
 @RestController
