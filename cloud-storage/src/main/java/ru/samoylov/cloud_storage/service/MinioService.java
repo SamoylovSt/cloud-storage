@@ -159,7 +159,7 @@ public class MinioService {
         }
     }
 
-    public MinioResource getResourceInfo(String path) {
+    public MinioResourceInfo getResourceInfo(String path) {
         try {
             StatObjectResponse stat = minioClient.statObject(
                     StatObjectArgs.builder()
@@ -168,7 +168,7 @@ public class MinioService {
                             .build()
             );
             if (path.endsWith("/")) {
-                MinioDirectoryInfo minioDirectoryInfo = new MinioDirectoryInfo();
+                MinioResourceInfo minioDirectoryInfo = new MinioResourceInfo();
                 minioDirectoryInfo.setType("DIRECTORY");
                 minioDirectoryInfo.setPath(path);
                 minioDirectoryInfo.setName(geObjectNameWithoutPath(path));
@@ -326,8 +326,8 @@ public class MinioService {
         return results;
     }
 
-    public List<MinioResource> search(String query) {
-        List<MinioResource> minioResourceList = new ArrayList<>();
+    public List<MinioResourceInfo> search(String query) {
+        List<MinioResourceInfo> minioResourceList = new ArrayList<>();
         String rootFolder = getRootFolder();
         try {
             Iterable<Result<Item>> results = minioClient.listObjects(ListObjectsArgs.builder()
@@ -340,42 +340,34 @@ public class MinioService {
             for (Result<Item> result : results) {
                 Item item = result.get();
                 String path = item.objectName();
-                System.out.println("путь с включением " + path);
 
                 String searchPattern = query + "/";
-                String folderName = geObjectNameWithoutPath(path) + "/";
-                String fileName = geObjectNameWithoutPath(path);
+                String objectName = geObjectNameWithoutPath(path);
 
                 String pathForFolder = path.replace(rootFolder, "");
-              if(pathForFolder.isEmpty()|| pathForFolder==null ||pathForFolder.equals("")){
-                  pathForFolder=path;
-              }
+                pathForFolder = pathForFolder.replace(objectName + "/", "");
                 pathForFolder = pathForFolder.replace(searchPattern, "");
 
-                if (path.endsWith(searchPattern)) {
+                if (path.contains(query) && path.endsWith(objectName + "/") && objectName.contains(query)) {
 
-                    System.out.println("финальный путь для папки " + pathForFolder);
+                    MinioResourceInfo minioDirectoryInfo = new MinioResourceInfo();
 
-                    MinioDirectoryInfo minioDirectoryInfo = new MinioDirectoryInfo();
                     minioDirectoryInfo.setType("DIRECTORY");
                     minioDirectoryInfo.setPath(pathForFolder);
-                    minioDirectoryInfo.setName(query + "/");
+                    minioDirectoryInfo.setName(objectName + "/");
                     minioResourceList.add(minioDirectoryInfo);
 
-                } else if (item.size() > 0 && fileName.contains(query)) {
+                } else if (item.size() > 0 && objectName.contains(query)) {
 
                     String finalPath = path.replace(rootFolder, "");
-                    finalPath = finalPath.replace(fileName, "");
-                    System.out.println("финальный путь для файла" + finalPath);
+                    finalPath = finalPath.replace(objectName, "");
                     MinioResourceInfo minioResourceInfo = new MinioResourceInfo();
                     minioResourceInfo.setSize(item.size());
-                    minioResourceInfo.setName(fileName);
+                    minioResourceInfo.setName(objectName);
                     minioResourceInfo.setType("FILE");
                     minioResourceInfo.setPath(finalPath);
                     minioResourceList.add(minioResourceInfo);
-
                 }
-
             }
             return minioResourceList;
 
@@ -383,6 +375,106 @@ public class MinioService {
             throw new RuntimeException(e);
         }
     }
+//TODO разобраться
+    public MinioResourceInfo renameFolder(String from, String to) {
+        String rootFolder = getRootFolder();
+        String sourcePath=rootFolder + from;
 
+        try {
+            // Убеждаемся, что путь заканчивается на / для поиска содержимого папки
+            if (!sourcePath.endsWith("/")) {
+                sourcePath += "/";
+            }
+
+            // Убеждаемся, что to тоже заканчивается на /
+            String targetPath = rootFolder + to;
+            if (!targetPath.endsWith("/")) {
+                targetPath += "/";
+            }
+
+            // Получаем список объектов
+            Iterable<Result<Item>> results = minioClient.listObjects(
+                    ListObjectsArgs.builder()
+                            .bucket(bucketname)
+                            .prefix(sourcePath)
+                            .recursive(true)
+                            .build()
+            );
+
+            // Сохраняем пути в список, так как нельзя итерировать Iterable дважды
+            List<String> objectsToProcess = new ArrayList<>();
+            for (Result<Item> result : results) {
+                Item item = result.get();
+                String objectName = item.objectName();
+
+                // Пропускаем папку
+                if (!objectName.equals(sourcePath) && !objectName.equals(sourcePath.substring(0, sourcePath.length() - 1))) {
+                    objectsToProcess.add(objectName);
+                }
+            }
+
+            // копируем  файлы
+            for (String sourceObjectName : objectsToProcess) {
+                String destinationObjectName = sourceObjectName.replace(
+                        sourcePath,
+                        targetPath
+                );
+
+                minioClient.copyObject(CopyObjectArgs.builder()
+                        .bucket(bucketname)
+                        .object(destinationObjectName)
+                        .source(CopySource.builder()
+                                .bucket(bucketname)
+                                .object(sourceObjectName)
+                                .build())
+                        .build());
+            }
+
+            // удаляем старые файлы
+            for (String sourceObjectName : objectsToProcess) {
+                minioClient.removeObject(RemoveObjectArgs.builder()
+                        .bucket(bucketname)
+                        .object(sourceObjectName)
+                        .build());
+            }
+
+            return new MinioResourceInfo();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    public MinioResourceInfo rename(String from, String to) {
+        String rootFolder = getRootFolder();
+        try {
+            return     renameFolder(from,to);
+
+//            minioClient.copyObject(CopyObjectArgs.builder()
+//                    .bucket(bucketname)
+//                    .object(rootFolder + to)
+//                    .source(CopySource.builder()
+//                            .bucket(bucketname)
+//                            .object(rootFolder + from)
+//                            .build())
+//                    .build());
+//
+//            minioClient.removeObject(RemoveObjectArgs.builder()
+//                    .bucket(bucketname)
+//                    .object(rootFolder + from)
+//                    .build());
+//            System.out.println("что произошло?");
+//            MinioResourceInfo minioResourceInfo = new MinioResourceInfo();
+//            minioResourceInfo.setSize((long) 2321);
+//            minioResourceInfo.setType("FILE");
+//            minioResourceInfo.setPath(rootFolder + to);
+//            minioResourceInfo.setName(from);
+            //TODO вернуть нормальный дто
+          //  return minioResourceInfo;
+        } catch (Exception e) {
+            throw new RuntimeException("Ошибка перемещения/переименования", e);
+        }
+
+    }
 
 }

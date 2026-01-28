@@ -10,7 +10,6 @@ import ru.samoylov.cloud_storage.dto.MinioResource;
 import ru.samoylov.cloud_storage.dto.MinioResourceInfo;
 import ru.samoylov.cloud_storage.service.MinioService;
 
-import java.io.InputStream;
 import java.util.List;
 
 @RestController
@@ -45,7 +44,6 @@ public class MinioController {
         return ResponseEntity.ok(minioService.getResourceInfo(path));
     }
 
-
     @PostMapping("/resource")
     public ResponseEntity<?> upload(
             @RequestParam("path") String folderPath,
@@ -66,8 +64,18 @@ public class MinioController {
     @GetMapping("/resource/search")
     public ResponseEntity<?> search(@RequestParam(name = "query") String path) {
 
-        List<MinioResource> minioResource = minioService.search(path);
+        List<MinioResourceInfo> minioResource = minioService.search(path);
         return ResponseEntity.ok().body(minioResource);
+    }
+
+    @GetMapping("/resource/move")
+    public ResponseEntity<?> rename(@RequestParam(name = "from") String from,
+                                    @RequestParam(name = "to") String to) {
+
+        System.out.println(from+" from");
+        System.out.println(to+"to");
+        MinioResourceInfo result = minioService.rename(from, to);
+        return ResponseEntity.ok(result);
     }
 
 }
