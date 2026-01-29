@@ -24,7 +24,7 @@ public class MinioController {
     }
 
     @GetMapping("/directory")
-    public ResponseEntity<List<MinioResource>> getInfoInFolder(@RequestParam(name = "path") String path) {
+    public ResponseEntity<List<MinioResourceInfo>> getInfoInFolder(@RequestParam(name = "path") String path) {
         return ResponseEntity.ok(minioService.getInfoInFolder(path));
     }
 
@@ -72,8 +72,8 @@ public class MinioController {
     public ResponseEntity<?> rename(@RequestParam(name = "from") String from,
                                     @RequestParam(name = "to") String to) {
 
-        System.out.println(from+" from");
-        System.out.println(to+"to");
+        System.out.println(from + " from");
+        System.out.println(to + "to");
         MinioResourceInfo result = minioService.rename(from, to);
         return ResponseEntity.ok(result);
     }
