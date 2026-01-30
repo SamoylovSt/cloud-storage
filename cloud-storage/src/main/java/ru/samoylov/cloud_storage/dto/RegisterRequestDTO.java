@@ -12,13 +12,12 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class RegisterRequest {
+public class RegisterRequestDTO {
     @NotBlank(message = "Username cannot be empty")
     @Size(min = 3, max = 30, message = "Username is not correct")
     private String username;
+
     @NotBlank(message = "password cannot be empty")
     @Size(min = 5, max = 100, message = "password is not correct")
     private String password;
-
-
 }

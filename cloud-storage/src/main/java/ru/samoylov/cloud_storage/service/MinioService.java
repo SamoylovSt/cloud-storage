@@ -5,12 +5,12 @@ import io.minio.messages.Item;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import ru.samoylov.cloud_storage.dto.MinioDirectoryInfo;
-import ru.samoylov.cloud_storage.dto.MinioResource;
 import ru.samoylov.cloud_storage.dto.MinioResourceInfo;
+import ru.samoylov.cloud_storage.exception.AppException;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -118,7 +118,7 @@ public class MinioService {
         return path;
     }
 
-    public MinioDirectoryInfo createFolder(String path) {
+    public MinioResourceInfo createFolder(String path) {
         path = normalizePath(path);
         String folderPathForSave = path.endsWith("/") ? path : path + "/";
         try {
@@ -129,7 +129,7 @@ public class MinioService {
                             .stream(new ByteArrayInputStream(new byte[]{}), 0, -1)
                             .build()
             );
-            MinioDirectoryInfo minioDirectoryInfo = new MinioDirectoryInfo();
+            MinioResourceInfo minioDirectoryInfo = new MinioResourceInfo();
             minioDirectoryInfo.setType("DIRECTORY");
             minioDirectoryInfo.setName(geObjectNameWithoutPath(path));
             minioDirectoryInfo.setPath(folderPathForSave);
@@ -173,6 +173,7 @@ public class MinioService {
                             .object(path)
                             .build()
             );
+
             if (path.endsWith("/")) {
                 String folderName = geObjectNameWithoutPath(path)+"/";
                 path = path.replace(rootFolder, "");
@@ -301,7 +302,7 @@ public class MinioService {
         }
     }
 
-    public MinioResource upload(String path, MultipartFile file) {
+    public MinioResourceInfo upload(String path, MultipartFile file) {
         try {
             String rootFolder = getRootFolder();
             String fileName = getFileNameWithoutPath(path);
@@ -328,11 +329,11 @@ public class MinioService {
         }
     }
 
-    public List<MinioResource> uploadMultiple(String path, MultipartFile[] files) {
-        List<MinioResource> results = new ArrayList<>();
+    public List<MinioResourceInfo> uploadMultiple(String path, MultipartFile[] files) {
+        List<MinioResourceInfo> results = new ArrayList<>();
         for (MultipartFile file : files) {
             String fullPath = path + file.getOriginalFilename();
-            MinioResource info = upload(fullPath, file);
+            MinioResourceInfo info = upload(fullPath, file);
             results.add(info);
         }
         return results;

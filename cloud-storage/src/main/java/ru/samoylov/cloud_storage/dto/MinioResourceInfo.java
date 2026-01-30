@@ -12,7 +12,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class MinioResourceInfo implements MinioResource {
+public class MinioResourceInfo  {
     @JsonProperty("path")
     private String path;
     @JsonProperty("name")
@@ -22,4 +22,3 @@ public class MinioResourceInfo implements MinioResource {
     @JsonProperty("type")
     private String type;
 }
-//TODO заменить на лишние дто
