@@ -68,15 +68,15 @@ public class AuthController {
 
     @PostMapping("/sign-out")
     public ResponseEntity<?> logoutUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null ||
-                !authentication.isAuthenticated() ||
-                authentication instanceof AnonymousAuthenticationToken) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        } else {
+//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+//        if (authentication == null ||
+//                !authentication.isAuthenticated() ||
+//                authentication instanceof AnonymousAuthenticationToken) {
+//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+//        } else {
             SecurityContextHolder.clearContext();
             return ResponseEntity.status(204).build();
-        }
+      //  }
     }
 
 }

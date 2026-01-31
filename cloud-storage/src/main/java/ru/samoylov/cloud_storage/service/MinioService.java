@@ -8,9 +8,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.ErrorResponseException;
 import org.springframework.web.multipart.MultipartFile;
 import ru.samoylov.cloud_storage.dto.MinioResourceInfo;
-import ru.samoylov.cloud_storage.exception.AppException;
+import ru.samoylov.cloud_storage.exception.MinioResourseException;
+import ru.samoylov.cloud_storage.exception.ObjectNotFountException;
+
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -85,16 +88,16 @@ public class MinioService {
 
     public String geObjectNameWithoutPath(String path) {
         String[] splitList = path.split("/");
-       if(splitList.length>0){
-           String result = splitList[splitList.length - 1];
+        if (splitList.length > 0) {
+            String result = splitList[splitList.length - 1];
 
-           if (result.endsWith("/")) {
-               result = result.substring(0, result.length() - 1);
-           }
-           return result;
-       }else {
-           return path;
-       }
+            if (result.endsWith("/")) {
+                result = result.substring(0, result.length() - 1);
+            }
+            return result;
+        } else {
+            return path;
+        }
     }
 
     private String normalizePath(String path) {
@@ -135,7 +138,7 @@ public class MinioService {
             minioDirectoryInfo.setPath(folderPathForSave);
             return minioDirectoryInfo;
         } catch (Exception e) {
-            throw new RuntimeException("Ошибка при создании папки", e);
+            throw new MinioResourseException(HttpStatus.INTERNAL_SERVER_ERROR, e, "Ошибка при создании папки");
         }
     }
 
@@ -149,15 +152,17 @@ public class MinioService {
                             .recursive(true)
                             .build()
             );
+
             for (Result<Item> result : results) {
                 Item item = result.get();
+
                 minioClient.removeObject(RemoveObjectArgs.builder()
                         .bucket(bucketname)
                         .object(item.objectName())
                         .build());
             }
         } catch (Exception e) {
-            throw new RuntimeException("ошибка удаления ресурса", e);
+            throw new MinioResourseException(HttpStatus.INTERNAL_SERVER_ERROR, e, "Ошибка удаления ресурса");
         }
     }
 
@@ -175,7 +180,7 @@ public class MinioService {
             );
 
             if (path.endsWith("/")) {
-                String folderName = geObjectNameWithoutPath(path)+"/";
+                String folderName = geObjectNameWithoutPath(path) + "/";
                 path = path.replace(rootFolder, "");
                 path = path.replace(folderName, "");
 
@@ -196,8 +201,9 @@ public class MinioService {
                 return minioResourceInfo;
             }
         } catch (Exception e) {
-            throw new RuntimeException("Ошибка получения информации о ресурсе", e);
+            throw new MinioResourseException(HttpStatus.INTERNAL_SERVER_ERROR, e, "Ошибка получения информации о ресурсе");
         }
+
     }
 
     public void downloadFile(String path, HttpServletResponse response) {
@@ -216,7 +222,7 @@ public class MinioService {
             }
 
         } catch (Exception e) {
-            throw new RuntimeException("Ошибка загрузки файла", e);
+            throw new MinioResourseException(HttpStatus.INTERNAL_SERVER_ERROR, e, "Ошибка загрузки обьекта");
         }
     }
 
@@ -265,7 +271,7 @@ public class MinioService {
             }
             zout.close();
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new MinioResourseException(HttpStatus.INTERNAL_SERVER_ERROR, e, "Ошибка загрузки папки");
         }
     }
 
@@ -298,7 +304,7 @@ public class MinioService {
 
             return results.iterator().hasNext();
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new MinioResourseException(HttpStatus.INTERNAL_SERVER_ERROR, e, "Ошибка проверки ресурса");
         }
     }
 
@@ -325,7 +331,7 @@ public class MinioService {
             minioResourceInfo.setName(fileName);
             return minioResourceInfo;
         } catch (Exception e) {
-            throw new RuntimeException("Ошибка при загрузке ресурса", e);
+            throw new MinioResourseException(HttpStatus.INTERNAL_SERVER_ERROR, e, "Ошибка аплоада ресурса");
         }
     }
 
@@ -385,7 +391,7 @@ public class MinioService {
             return minioResourceList;
 
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new MinioResourseException(HttpStatus.INTERNAL_SERVER_ERROR, e, "Ошибка поиска ресурса");
         }
     }
 
@@ -444,11 +450,9 @@ public class MinioService {
                         .object(sourceObjectName)
                         .build());
             }
-
-            System.out.println("что идёт в гетресурс"+ to);
             return getResourceInfo(to);
         } catch (Exception e) {
-            throw new RuntimeException("ошибка перемещения/переименования ресурса", e);
+            throw new MinioResourseException(HttpStatus.INTERNAL_SERVER_ERROR, e, "ошибка перемещения/переименования ресурса");
         }
 
     }
@@ -469,10 +473,8 @@ public class MinioService {
                     .object(rootFolder + from)
                     .build());
         } catch (Exception e) {
-            throw new RuntimeException("Ошибка переименования/перемещения одиночного ресурса", e);
+            throw new MinioResourseException(HttpStatus.INTERNAL_SERVER_ERROR, e, "Ошибка переименования/перемещения одиночного ресурса");
         }
-
-
     }
 
     public MinioResourceInfo rename(String from, String to) {
@@ -483,7 +485,8 @@ public class MinioService {
             renameSingleObject(from, to);
             return getResourceInfo(to);
         } catch (Exception e) {
-            throw new RuntimeException("Ошибка перемещения/переименования", e);
+            throw new MinioResourseException(HttpStatus.INTERNAL_SERVER_ERROR, e, "Ошибка переименования/перемещения");
+
         }
     }
 

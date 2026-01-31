@@ -1,12 +1,17 @@
 package ru.samoylov.cloud_storage.controller;
 
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import ru.samoylov.cloud_storage.dto.MinioResourceInfo;
+import ru.samoylov.cloud_storage.dto.ValidPathDTO;
+
 import ru.samoylov.cloud_storage.service.MinioService;
 
 import java.util.List;
@@ -28,21 +33,21 @@ public class MinioController {
     }
 
     @PostMapping("/directory")
-    public ResponseEntity<?> createFolder(@RequestParam(name = "path") String path) {
-        return ResponseEntity.ok(minioService.createFolder(path));
+    public ResponseEntity<?> createFolder(@Valid ValidPathDTO path) {
+        return ResponseEntity.ok(minioService.createFolder(path.getPath()));
     }
 
     @DeleteMapping("/resource")
-    public ResponseEntity<?> delete(@RequestParam(name = "path") String path) {
-        minioService.deleteResource(path);
+    public ResponseEntity<?> delete(@Valid ValidPathDTO path) {
+        minioService.deleteResource(path.getPath());
         return ResponseEntity.status(204).build();
     }
 
     @GetMapping("/resource")
-    public ResponseEntity<?> getResourceInfo(@RequestParam(name = "path") String path) {
-
-        return ResponseEntity.ok(minioService.getResourceInfo(path));
+    public ResponseEntity<?> getResourceInfo(@Valid ValidPathDTO path) {
+        return ResponseEntity.ok(minioService.getResourceInfo(path.getPath()));
     }
+
 
     @PostMapping("/resource")
     public ResponseEntity<?> upload(
@@ -63,14 +68,14 @@ public class MinioController {
 
     @GetMapping("/resource/search")
     public ResponseEntity<?> search(@RequestParam(name = "query") String path) {
-
         List<MinioResourceInfo> minioResource = minioService.search(path);
         return ResponseEntity.ok().body(minioResource);
     }
 
     @GetMapping("/resource/move")
-    public ResponseEntity<?> rename(@RequestParam(name = "from") String from,
-                                    @RequestParam(name = "to") String to) {
+    public ResponseEntity<?> rename(
+        @RequestParam(name = "from") String from,
+        @RequestParam(name = "to") String to) {
 
         System.out.println(from + " from");
         System.out.println(to + "to");
