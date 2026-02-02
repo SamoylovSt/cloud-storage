@@ -41,21 +41,4 @@ public class UserService {
         }
     }
 
-//    public User getUserByName(String name) {
-//        try {
-//            return userRepository.getUserByName(name).get();
-//        } catch (Exception e) {
-//            throw new RuntimeException("Ошибка получения пользователя", e);
-//        }
-//    }
-//
-//    public boolean existUserByName(String name) {
-//        try {
-//            return userRepository.getUserByName(name).isEmpty();
-//        } catch (RuntimeException e) {
-//            throw new ValidationException("Такой пользователь уже существует СЕРВИС", e, HttpStatus.CONTINUE.value());
-//        }
-//    }
-
-
 }
