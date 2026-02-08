@@ -3,10 +3,12 @@ package ru.samoylov.cloud_storage.controller;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import ru.samoylov.cloud_storage.doc.ResourceSwagger;
 import ru.samoylov.cloud_storage.dto.MinioResourceInfo;
 import ru.samoylov.cloud_storage.dto.ValidPathDTO;
 import ru.samoylov.cloud_storage.service.MinioService;
@@ -14,39 +16,34 @@ import ru.samoylov.cloud_storage.service.MinioService;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api")
-public class MinioController {
+@RequestMapping("/api/resource")
+public class ResourceController implements ResourceSwagger {
 
     @Autowired
     private MinioService minioService;
 
-    public MinioController(MinioService minioService) {
+    public ResourceController(MinioService minioService) {
         this.minioService = minioService;
     }
 
-    @GetMapping("/directory")
-    public ResponseEntity<List<MinioResourceInfo>> getInfoInFolder(@RequestParam(name = "path") String path) {
-        return ResponseEntity.ok(minioService.getInfoInFolder(path));
-    }
-
-    @PostMapping("/directory")
-    public ResponseEntity<?> createFolder(@Valid ValidPathDTO path) {
-        return ResponseEntity.ok(minioService.createFolder(path.getPath()));
-    }
-
-    @DeleteMapping("/resource")
+    @Override
+    @DeleteMapping
     public ResponseEntity<?> delete(@Valid ValidPathDTO path) {
         minioService.deleteResource(path.getPath());
         return ResponseEntity.status(204).build();
     }
 
-    @GetMapping("/resource")
+    @Override
+    @GetMapping
     public ResponseEntity<?> getResourceInfo(@Valid ValidPathDTO path) {
+        if (!minioService.objectExist(path.getPath())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
         return ResponseEntity.ok(minioService.getResourceInfo(path.getPath()));
     }
 
-
-    @PostMapping("/resource")
+    @Override
+    @PostMapping
     public ResponseEntity<?> upload(
             @RequestParam("path") String folderPath,
             @RequestParam("object") MultipartFile[] files) {
@@ -55,7 +52,8 @@ public class MinioController {
         return ResponseEntity.status(201).body(uploadedFiles);
     }
 
-    @GetMapping("/resource/download")
+    @Override
+    @GetMapping("/download")
     public ResponseEntity<?> download(@RequestParam(name = "path") String path,
                                       HttpServletResponse response) {
         response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
@@ -63,16 +61,18 @@ public class MinioController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/resource/search")
+    @Override
+    @GetMapping("/search")
     public ResponseEntity<?> search(@RequestParam(name = "query") String path) {
         List<MinioResourceInfo> minioResource = minioService.search(path);
         return ResponseEntity.ok().body(minioResource);
     }
 
-    @GetMapping("/resource/move")
+    @Override
+    @GetMapping("/move")
     public ResponseEntity<?> rename(
-        @RequestParam(name = "from") String from,
-        @RequestParam(name = "to") String to) {
+            @RequestParam(name = "from") String from,
+            @RequestParam(name = "to") String to) {
 
         System.out.println(from + " from");
         System.out.println(to + "to");

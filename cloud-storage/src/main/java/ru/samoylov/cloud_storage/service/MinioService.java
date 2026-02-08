@@ -1,6 +1,7 @@
 package ru.samoylov.cloud_storage.service;
 
 import io.minio.*;
+import io.minio.errors.ErrorResponseException;
 import io.minio.messages.Item;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,9 +9,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.ErrorResponseException;
 import org.springframework.web.multipart.MultipartFile;
 import ru.samoylov.cloud_storage.dto.MinioResourceInfo;
+import ru.samoylov.cloud_storage.exception.AppException;
 import ru.samoylov.cloud_storage.exception.MinioResourseException;
 import ru.samoylov.cloud_storage.exception.ObjectNotFountException;
 
@@ -37,6 +38,29 @@ public class MinioService {
         this.userService = userService;
     }
 
+    public boolean bucketExist(String bucketname) {
+        try {
+            return minioClient.bucketExists(BucketExistsArgs.builder()
+                    .bucket(bucketname)
+                    .build());
+        } catch (Exception ex) {
+            throw new MinioResourseException(HttpStatus.INTERNAL_SERVER_ERROR, ex, "Ошибка проверки бакета");
+        }
+    }
+
+    public void createBucketIfNotExist(String bucketname) {
+        try {
+            boolean exist = bucketExist(bucketname);
+            if (!exist) {
+                minioClient.makeBucket(MakeBucketArgs.builder()
+                        .bucket(bucketname)
+                        .build());
+            }
+        } catch (Exception e) {
+            throw new MinioResourseException(HttpStatus.INTERNAL_SERVER_ERROR, e, "Ошибка создания бакета");
+        }
+    }
+
     public String getRootFolder() {
         String currentUserName = SecurityContextHolder.getContext().getAuthentication().getName().toString();
         long currentUserId = userService.getCurrentUserIdByName(currentUserName);
@@ -45,6 +69,7 @@ public class MinioService {
     }
 
     public List<MinioResourceInfo> getInfoInFolder(String path) {
+        createBucketIfNotExist(bucketname);
         List<MinioResourceInfo> minioResourceInfoList = new ArrayList<>();
         String rootFolder = getRootFolder();
         try {
@@ -167,6 +192,7 @@ public class MinioService {
     }
 
     public MinioResourceInfo getResourceInfo(String path) {
+        createBucketIfNotExist(bucketname);
         String rootFolder = getRootFolder();
         try {
             if (!path.contains(rootFolder)) {
@@ -183,6 +209,7 @@ public class MinioService {
                 String folderName = geObjectNameWithoutPath(path) + "/";
                 path = path.replace(rootFolder, "");
                 path = path.replace(folderName, "");
+              //  objectExist(folderName);
 
                 MinioResourceInfo minioDirectoryInfo = new MinioResourceInfo();
                 minioDirectoryInfo.setType("DIRECTORY");
@@ -193,6 +220,7 @@ public class MinioService {
                 String fileName = geObjectNameWithoutPath(path);
                 path = path.replace(rootFolder, "");
                 path = path.replace(fileName, "");
+               // objectExist(fileName);
                 MinioResourceInfo minioResourceInfo = new MinioResourceInfo();
                 minioResourceInfo.setName(fileName);
                 minioResourceInfo.setType("FILE");
@@ -488,6 +516,25 @@ public class MinioService {
             throw new MinioResourseException(HttpStatus.INTERNAL_SERVER_ERROR, e, "Ошибка переименования/перемещения");
 
         }
+    }
+
+    public boolean objectExist(String objectName) {
+        try {
+            StatObjectResponse stat = minioClient.statObject(StatObjectArgs.builder()
+                    .bucket(bucketname)
+                    .object(objectName)
+                    .build());
+                    return  true;
+
+        }catch (ErrorResponseException e){
+            if ("NoSuchKey".equals(e.errorResponse().code())) {
+                return false;
+            }
+            throw  new ObjectNotFountException(HttpStatus.NOT_FOUND,"ресурс не найден");
+        }catch (Exception e){
+            throw  new MinioResourseException(HttpStatus.INTERNAL_SERVER_ERROR,e,"ошибка проверки существования обьекта");
+        }
+
     }
 
 }

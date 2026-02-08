@@ -1,5 +1,11 @@
 package ru.samoylov.cloud_storage.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import ru.samoylov.cloud_storage.doc.AuthSwagger;
 import ru.samoylov.cloud_storage.dto.RegisterRequestDTO;
 import ru.samoylov.cloud_storage.repository.UserRepository;
 import ru.samoylov.cloud_storage.service.UserService;
@@ -21,7 +28,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
-public class AuthController {
+public class AuthController implements AuthSwagger {
 
     private final AuthenticationManager authenticationManager;
 
@@ -32,6 +39,7 @@ public class AuthController {
         this.userService = userService;
     }
 
+    @Override
     @PostMapping("/sign-in")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody RegisterRequestDTO authRequest) {
         try {
@@ -53,18 +61,21 @@ public class AuthController {
         }
     }
 
+    @Override
     @PostMapping("/sign-up")
     public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequestDTO registerRequest) {
         userService.saveUser(registerRequest);
         Map<String, String> response = new HashMap<>();
         response.put("username", registerRequest.getUsername());
+        authenticateUser(registerRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @Override
     @PostMapping("/sign-out")
     public ResponseEntity<?> logoutUser() {
-            SecurityContextHolder.clearContext();
-            return ResponseEntity.status(204).build();
+        SecurityContextHolder.clearContext();
+        return ResponseEntity.status(204).build();
     }
 
 }
