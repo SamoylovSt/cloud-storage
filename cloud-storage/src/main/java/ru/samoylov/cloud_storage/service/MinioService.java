@@ -209,8 +209,6 @@ public class MinioService {
                 String folderName = geObjectNameWithoutPath(path) + "/";
                 path = path.replace(rootFolder, "");
                 path = path.replace(folderName, "");
-              //  objectExist(folderName);
-
                 MinioResourceInfo minioDirectoryInfo = new MinioResourceInfo();
                 minioDirectoryInfo.setType("DIRECTORY");
                 minioDirectoryInfo.setPath(path);
@@ -220,7 +218,6 @@ public class MinioService {
                 String fileName = geObjectNameWithoutPath(path);
                 path = path.replace(rootFolder, "");
                 path = path.replace(fileName, "");
-               // objectExist(fileName);
                 MinioResourceInfo minioResourceInfo = new MinioResourceInfo();
                 minioResourceInfo.setName(fileName);
                 minioResourceInfo.setType("FILE");
@@ -347,7 +344,7 @@ public class MinioService {
                             .stream(
                                     file.getInputStream(),
                                     file.getSize(),
-                                    -1
+                              -1
                             )
                             .contentType(file.getContentType())
                             .build()
