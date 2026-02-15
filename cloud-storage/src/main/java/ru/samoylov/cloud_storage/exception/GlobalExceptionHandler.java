@@ -12,7 +12,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ObjectNotFountException.class)
     public ResponseEntity<ErrorResponse> notFound(ObjectNotFountException ex) {
         ErrorResponse errorResponse = new ErrorResponse(ex.getMessage());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -26,7 +26,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> validation(ValidationException ex) {
         ErrorResponse errorResponse =
                 new ErrorResponse(ex.getMessage());
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+        return ResponseEntity.status(ex.getErrorCode()).body(errorResponse);
     }
     @ExceptionHandler(MinioResourseException.class)
     public ResponseEntity<ErrorResponse> minioObjectException(MinioResourseException ex) {

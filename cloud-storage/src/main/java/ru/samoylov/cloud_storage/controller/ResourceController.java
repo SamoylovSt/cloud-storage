@@ -3,7 +3,6 @@ package ru.samoylov.cloud_storage.controller;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -36,9 +35,6 @@ public class ResourceController implements ResourceSwagger {
     @Override
     @GetMapping
     public ResponseEntity<?> getResourceInfo(@Valid ValidPathDTO path) {
-        if (!minioService.objectExist(path.getPath())) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
         return ResponseEntity.ok(minioService.getResourceInfo(path.getPath()));
     }
 
@@ -73,9 +69,6 @@ public class ResourceController implements ResourceSwagger {
     public ResponseEntity<?> rename(
             @RequestParam(name = "from") String from,
             @RequestParam(name = "to") String to) {
-
-        System.out.println(from + " from");
-        System.out.println(to + "to");
         MinioResourceInfo result = minioService.rename(from, to);
         return ResponseEntity.ok(result);
     }

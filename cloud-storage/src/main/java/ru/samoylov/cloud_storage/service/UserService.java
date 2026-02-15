@@ -26,7 +26,7 @@ public class UserService {
         try {
             return userRepository.getUserByName(name).get().getId();
         } catch (Exception e) {
-            throw new ValidationException("Пользователь не авторизован", e, HttpStatus.CONFLICT.value());
+            throw new ValidationException("Пользователь не авторизован",  HttpStatus.CONFLICT.value());
         }
     }
 
@@ -37,7 +37,7 @@ public class UserService {
             user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
             userRepository.save(user);//
         } catch (RuntimeException e) {
-            throw new ValidationException("Такой пользователь уже существует", e, HttpStatus.CONFLICT.value());
+            throw new ValidationException("Такой пользователь уже существует",  HttpStatus.CONFLICT.value());
         }
     }
 

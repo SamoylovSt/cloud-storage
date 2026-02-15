@@ -25,7 +25,6 @@ services:
       - minio_data:/data
     restart: unless-stopped
 
-
   redis:
     image: redis:7-alpine
     ports:
@@ -34,6 +33,8 @@ services:
       - redis_data:/data
     command: redis-server --appendonly yes
     restart: unless-stopped
+    networks:
+      - internal-net
 
 
 volumes:

@@ -1,14 +1,32 @@
 package ru.samoylov.cloud_storage.exception;
 
-public class ValidationException extends RuntimeException {
-    private final int errorCode;
+import org.springframework.http.HttpStatus;
 
-    public ValidationException(String message, Throwable cause, int errorCode) {
-        super(message, cause);
-        this.errorCode = errorCode;
-    }
+public class ValidationException extends RuntimeException {
+
+    private final int errorCode;
+    private final String message;
+
+
     public ValidationException(String message, int errorCode) {
         super(message);
+        this.message = message;
         this.errorCode = errorCode;
     }
+
+    public ValidationException(String message, HttpStatus status) {
+        super(message);
+        this.message = message;
+        this.errorCode = status.value();
+    }
+
+    public int getErrorCode() {
+        return errorCode;
+    }
+
+    @Override
+    public String getMessage() {
+        return message;
+    }
+
 }

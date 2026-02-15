@@ -14,6 +14,7 @@ import ru.samoylov.cloud_storage.dto.MinioResourceInfo;
 import ru.samoylov.cloud_storage.exception.AppException;
 import ru.samoylov.cloud_storage.exception.MinioResourseException;
 import ru.samoylov.cloud_storage.exception.ObjectNotFountException;
+import ru.samoylov.cloud_storage.exception.ValidationException;
 
 
 import java.io.ByteArrayInputStream;
@@ -334,6 +335,9 @@ public class MinioService {
     }
 
     public MinioResourceInfo upload(String path, MultipartFile file) {
+        long partSize = file.getSize() > 50 * 1024 * 1024
+                ? 20 * 1024 * 1024
+                : 10 * 1024 * 1024;
         try {
             String rootFolder = getRootFolder();
             String fileName = getFileNameWithoutPath(path);
@@ -344,7 +348,7 @@ public class MinioService {
                             .stream(
                                     file.getInputStream(),
                                     file.getSize(),
-                              -1
+                                    partSize
                             )
                             .contentType(file.getContentType())
                             .build()
@@ -521,17 +525,16 @@ public class MinioService {
                     .bucket(bucketname)
                     .object(objectName)
                     .build());
-                    return  true;
+            return true;
 
-        }catch (ErrorResponseException e){
-            if ("NoSuchKey".equals(e.errorResponse().code())) {
-                return false;
-            }
-            throw  new ObjectNotFountException(HttpStatus.NOT_FOUND,"ресурс не найден");
-        }catch (Exception e){
-            throw  new MinioResourseException(HttpStatus.INTERNAL_SERVER_ERROR,e,"ошибка проверки существования обьекта");
+        } catch (ErrorResponseException e) {
+
+            throw new ObjectNotFountException(HttpStatus.NOT_FOUND, "ресурс не найден");
+        } catch (Exception e) {
+            throw new MinioResourseException(HttpStatus.INTERNAL_SERVER_ERROR, e, "ошибка проверки существования обьекта");
         }
 
     }
+
 
 }
