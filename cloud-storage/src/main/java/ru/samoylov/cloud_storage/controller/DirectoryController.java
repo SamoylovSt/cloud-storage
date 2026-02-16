@@ -1,6 +1,7 @@
 package ru.samoylov.cloud_storage.controller;
 
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.samoylov.cloud_storage.doc.DirectorySwagger;
@@ -12,13 +13,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/directory")
+@RequiredArgsConstructor
 public class DirectoryController implements DirectorySwagger {
 
     private final MinioService minioService;
-
-    public DirectoryController(MinioService minioService) {
-        this.minioService = minioService;
-    }
 
     @Override
     @GetMapping

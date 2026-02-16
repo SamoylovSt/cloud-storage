@@ -2,6 +2,7 @@ package ru.samoylov.cloud_storage.controller;
 
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -16,14 +17,11 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/resource")
+@RequiredArgsConstructor
 public class ResourceController implements ResourceSwagger {
 
     @Autowired
     private MinioService minioService;
-
-    public ResourceController(MinioService minioService) {
-        this.minioService = minioService;
-    }
 
     @Override
     @DeleteMapping

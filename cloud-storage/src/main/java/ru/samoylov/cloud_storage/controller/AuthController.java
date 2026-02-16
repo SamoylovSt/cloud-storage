@@ -1,26 +1,19 @@
 package ru.samoylov.cloud_storage.controller;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import ru.samoylov.cloud_storage.doc.AuthSwagger;
 import ru.samoylov.cloud_storage.dto.RegisterRequestDTO;
-import ru.samoylov.cloud_storage.repository.UserRepository;
 import ru.samoylov.cloud_storage.service.UserService;
 
 import java.util.HashMap;
@@ -28,20 +21,17 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class AuthController implements AuthSwagger {
 
     private final AuthenticationManager authenticationManager;
 
     private final UserService userService;
 
-    public AuthController(AuthenticationManager authenticationManager, UserRepository userRepository, PasswordEncoder passwordEncoder, UserService userService) {
-        this.authenticationManager = authenticationManager;
-        this.userService = userService;
-    }
-
     @Override
     @PostMapping("/sign-in")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody RegisterRequestDTO authRequest) {
+
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
@@ -65,6 +55,7 @@ public class AuthController implements AuthSwagger {
     @PostMapping("/sign-up")
     public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequestDTO registerRequest) {
         userService.saveUser(registerRequest);
+
         Map<String, String> response = new HashMap<>();
         response.put("username", registerRequest.getUsername());
         authenticateUser(registerRequest);
